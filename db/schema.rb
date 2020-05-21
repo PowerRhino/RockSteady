@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20180710112004) do
+ActiveRecord::Schema.define(version: 20200520104029) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -29,4 +29,16 @@ ActiveRecord::Schema.define(version: 20180710112004) do
     t.index ["name"], name: "index_apps_on_name", unique: true
   end
 
+  create_table "graylog_streams", force: :cascade do |t|
+    t.string "stream_id"
+    t.string "stream_name"
+    t.string "stream_rule_value"
+    t.string "index_set"
+    t.bigint "app_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["app_id"], name: "index_graylog_streams_on_app_id"
+  end
+
+  add_foreign_key "graylog_streams", "apps"
 end
