@@ -71,4 +71,84 @@ RSpec.describe App do
       expect { app_named('no-auto-deploy', auto_deploy_branch: 'master', auto_deploy: true).trigger_auto_deploy(notification) }.to raise_error(HTTP::TimeoutError)
     end
   end
+
+  describe '#build_graylog' do
+    def app_initialised(name, options = {})
+      App.new(
+        { name: name, repository_name: 'test', job_spec: 'job {}' }.merge(options)
+      )
+    end
+
+    let(:params) { {} }
+    let(:api_manager) { class_double(GraylogApi::Manager) }
+
+    before do
+      ENV['GRAYLOG_ENABLED'] == 'true'
+      allow(api_manager).to receive(:new)
+    end
+
+    context 'when an app is invalid' do
+      it 'does nothing' do
+        app_initialised('invalid name').build_graylog(params)
+
+        expect(api_manager).to_not have_received(:new)
+      end
+    end
+
+    context 'when an app is valid but add_graylog_stream param is missing' do
+      it 'does nothing' do
+        app_initialised('valid').build_graylog(params)
+
+        expect(api_manager).to_not have_received(:new)
+      end
+    end
+
+    context 'when an app is valid but add_graylog_stream param is not ticked' do
+      let(:params) { { add_graylog_stream: '0' } }
+
+      it 'does nothing' do
+        app_initialised('valid').build_graylog(params)
+
+        expect(api_manager).to_not have_received(:new)
+      end
+    end
+
+    context 'when an app is valid and add_graylog_stream is ticked' do
+      let(:params) { { add_graylog_stream: '1' } }
+      let(:result_stub) {
+        {
+          result: OpenStruct.new(success?: true )
+        }
+      }
+
+      it 'initialises the setup process and builds the association' do
+        api_manager_instance = instance_double(GraylogApi::Manager)
+
+        allow(GraylogApi::Manager).to receive(:new).and_return(api_manager_instance)
+        allow(api_manager_instance).to receive(:setup).and_return(result_stub)
+        app = app_initialised('name').build_graylog(params)
+
+        expect(app.graylog_stream).to_not be_nil
+      end
+    end
+
+    context 'when the result is not successful' do
+      let(:params) { { add_graylog_stream: '1' } }
+      let(:result_stub) {
+        {
+          result: OpenStruct.new(success?: false, message: 'Cannot create graylog stream' )
+        }
+      }
+
+      it 'the associated graylog_stream is not built' do
+        api_manager_instance = instance_double(GraylogApi::Manager)
+
+        allow(GraylogApi::Manager).to receive(:new).and_return(api_manager_instance)
+        allow(api_manager_instance).to receive(:setup).and_return(result_stub)
+        app = app_initialised('name').build_graylog(params)
+
+        expect(app.graylog_stream).to be_nil
+      end
+    end
+  end
 end
