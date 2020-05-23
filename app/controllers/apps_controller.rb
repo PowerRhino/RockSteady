@@ -30,7 +30,7 @@ class AppsController < ApplicationController
   end
 
   def create
-    @app = App.new(app_params)
+    @app = App.build(app_params)
 
     respond_to do |format|
       format.html do
@@ -84,7 +84,8 @@ class AppsController < ApplicationController
       :repository_name,
       :job_spec,
       :auto_deploy,
-      :auto_deploy_branch
+      :auto_deploy_branch,
+      :add_graylog_stream
     )
   end
 

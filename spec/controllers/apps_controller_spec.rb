@@ -99,6 +99,41 @@ RSpec.describe AppsController, type: :controller do
 
         expect(response.status).to eq(400)
       end
+
+      context 'when Graylog stream integration is enabled' do
+        before { ENV['GRAYLOG_ENABLED'] = 'true' }
+        after { ENV.delete('GRAYLOG_ENABLED') }
+
+        it 'returns HTTP status OK (200) when the app is created with a Graylog stream' do
+          payload_with_stream = payload.dup
+          payload_with_stream[:app][:add_graylog_stream] = '1'
+
+          result_stub = { result: OpenStruct.new(success?: true), stream_id: '123' }
+
+          api_manager_instance = instance_double(GraylogApi::Manager)
+          allow(GraylogApi::Manager).to receive(:new).and_return(api_manager_instance)
+          allow(api_manager_instance).to receive(:setup).and_return(result_stub)
+
+          post :create, params: payload_with_stream, as: :json
+
+          expect(response.status).to eq(200)
+        end
+
+        it 'returns HTTP status 400 when adding a Graylog stream fails' do
+          payload_with_stream = payload.dup
+          payload_with_stream[:app][:add_graylog_stream] = '1'
+
+          result_stub = { result: OpenStruct.new(success?: false) }
+
+          api_manager_instance = instance_double(GraylogApi::Manager)
+          allow(GraylogApi::Manager).to receive(:new).and_return(api_manager_instance)
+          allow(api_manager_instance).to receive(:setup).and_return(result_stub)
+
+          post :create, params: payload_with_stream, as: :json
+
+          expect(response.status).to eq(400)
+        end
+      end
     end
   end
 end
